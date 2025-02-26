@@ -4,63 +4,128 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web NFC & QR Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
         button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
         input { padding: 10px; font-size: 16px; width: 80%; }
+        video { width: 100%; max-width: 400px; margin: 20px auto; display: none; }
         .hidden { display: none; }
-        #qr-reader { width: 300px; margin: auto; }
     </style>
 </head>
 <body>
-    <h1>Web NFC & QR Scanner</h1>
-
-    <!-- NFC Section -->
-    <h2>NFC Scanner</h2>
+    <h1>Web NFC & QR Code Scanner</h1>
+    
+    <!-- NFC Read Button -->
     <button id="scanNFC">Scan NFC Tag</button>
     <p id="nfcResult">NFC data will appear here...</p>
 
-    <!-- QR Code Scanner Section -->
-    <h2>QR Code Scanner</h2>
-    <div id="qr-reader"></div>
-    <p id="qrResult">QR Code data will appear here...</p>
+    <!-- QR Code Scanner Button -->
+    <button id="scanQR">Scan QR Code</button>
+    <video id="qrVideo" autoplay></video>
+    <p id="qrResult">QR code data will appear here...</p>
+
+    <h2>Write to NFC Tag</h2>
+    <input type="text" id="nfcMessage" placeholder="Enter text to write">
+    <button id="writeNFC">Write to NFC Tag</button>
+    <p id="writeStatus"></p>
+
+    <p id="nfcWarning" class="hidden" style="color: red;"></p>
 
     <script>
-        // NFC Scanning
-        if ("NDEFReader" in window) {
-            document.getElementById("scanNFC").addEventListener("click", async () => {
+        document.addEventListener("DOMContentLoaded", () => {
+            const nfcWarning = document.getElementById("nfcWarning");
+
+            /** ✅ NFC Functionality */
+            if (!("NDEFReader" in window)) {
+                nfcWarning.textContent = "⚠️ Web NFC is not supported on this device. Try using an Android phone with Chrome.";
+                nfcWarning.classList.remove("hidden");
+
+                // Simulate NFC scan and write for testing
+                document.getElementById("scanNFC").addEventListener("click", () => {
+                    document.getElementById("nfcResult").textContent = "Simulated NFC Data: Hello from Mac!";
+                });
+
+                document.getElementById("writeNFC").addEventListener("click", () => {
+                    let message = document.getElementById("nfcMessage").value;
+                    if (!message) {
+                        alert("Please enter a message to simulate writing.");
+                        return;
+                    }
+                    document.getElementById("writeStatus").textContent = "Simulated NFC Write: " + message;
+                });
+            } else {
+                document.getElementById("scanNFC").addEventListener("click", async () => {
+                    try {
+                        const ndef = new NDEFReader();
+                        await ndef.scan();
+                        ndef.onreading = event => {
+                            const decoder = new TextDecoder();
+                            let text = decoder.decode(event.message.records[0].data);
+                            document.getElementById("nfcResult").textContent = "NFC Read: " + text;
+                        };
+                    } catch (error) {
+                        alert("Error: " + error);
+                    }
+                });
+
+                document.getElementById("writeNFC").addEventListener("click", async () => {
+                    let message = document.getElementById("nfcMessage").value;
+                    if (!message) {
+                        alert("Please enter a message to write.");
+                        return;
+                    }
+
+                    try {
+                        const ndef = new NDEFReader();
+                        await ndef.write(message);
+                        document.getElementById("writeStatus").textContent = "Successfully wrote: " + message;
+                    } catch (error) {
+                        alert("Error writing NFC: " + error);
+                    }
+                });
+            }
+
+            /** ✅ QR Code Scanner Functionality */
+            let video = document.getElementById("qrVideo");
+            let qrResult = document.getElementById("qrResult");
+
+            document.getElementById("scanQR").addEventListener("click", async () => {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    alert("Camera access not supported in this browser.");
+                    return;
+                }
+
                 try {
-                    const ndef = new NDEFReader();
-                    await ndef.scan();
-                    ndef.onreading = event => {
-                        const decoder = new TextDecoder();
-                        let text = decoder.decode(event.message.records[0].data);
-                        document.getElementById("nfcResult").textContent = "NFC Read: " + text;
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                    video.srcObject = stream;
+                    video.style.display = "block";
+
+                    const qrScanner = new BarcodeDetector({ formats: ["qr_code"] });
+
+                    const scanFrame = async () => {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            const imageCapture = new ImageCapture(video.srcObject.getVideoTracks()[0]);
+                            const bitmap = await imageCapture.grabFrame();
+                            const results = await qrScanner.detect(bitmap);
+
+                            if (results.length > 0) {
+                                qrResult.textContent = "QR Code: " + results[0].rawValue;
+                                video.srcObject.getTracks().forEach(track => track.stop());
+                                video.style.display = "none";
+                            } else {
+                                requestAnimationFrame(scanFrame);
+                            }
+                        } else {
+                            requestAnimationFrame(scanFrame);
+                        }
                     };
+
+                    requestAnimationFrame(scanFrame);
                 } catch (error) {
-                    alert("Error scanning NFC: " + error);
+                    alert("Error accessing camera: " + error);
                 }
             });
-        } else {
-            document.getElementById("nfcResult").textContent = "NFC is not supported on this device.";
-        }
-
-        // QR Code Scanning
-        function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById("qrResult").textContent = "QR Code Read: " + decodedText;
-        }
-
-        function onScanError(errorMessage) {
-            console.warn("QR Scan Error:", errorMessage);
-        }
-
-        let qrScanner = new Html5QrcodeScanner("qr-reader", {
-            fps: 10,
-            qrbox: 250
         });
-
-        qrScanner.render(onScanSuccess, onScanError);
     </script>
 </body>
 </html>
