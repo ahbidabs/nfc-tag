@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web NFC App</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+        input { padding: 10px; font-size: 16px; width: 80%; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Web NFC Scanner & Writer</h1>
+    
+    <button id="scanNFC">Scan NFC Tag</button>
+    <p id="nfcResult">NFC data will appear here...</p>
+
+    <h2>Write to NFC Tag</h2>
+    <input type="text" id="nfcMessage" placeholder="Enter text to write">
+    <button id="writeNFC">Write to NFC Tag</button>
+    <p id="writeStatus"></p>
+
+    <p id="nfcWarning" class="hidden" style="color: red;"></p>
+
+    <script>
+        function isMac() {
+            return navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const nfcWarning = document.getElementById("nfcWarning");
+
+            if (!("NDEFReader" in window)) {
+                // Show a message if NFC is not supported (e.g., on Mac)
+                nfcWarning.textContent = "⚠️ Web NFC is not supported on this device. Try using an Android phone with Chrome.";
+                nfcWarning.classList.remove("hidden");
+
+                // Simulate NFC scan and write for testing
+                document.getElementById("scanNFC").addEventListener("click", () => {
+                    document.getElementById("nfcResult").textContent = "Simulated NFC Data: Hello from Mac!";
+                });
+
+                document.getElementById("writeNFC").addEventListener("click", () => {
+                    let message = document.getElementById("nfcMessage").value;
+                    if (!message) {
+                        alert("Please enter a message to simulate writing.");
+                        return;
+                    }
+                    document.getElementById("writeStatus").textContent = "Simulated NFC Write: " + message;
+                });
+            } else {
+                // Real NFC functionality for supported devices
+                document.getElementById("scanNFC").addEventListener("click", async () => {
+                    try {
+                        const ndef = new NDEFReader();
+                        await ndef.scan();
+                        ndef.onreading = event => {
+                            const decoder = new TextDecoder();
+                            let text = decoder.decode(event.message.records[0].data);
+                            document.getElementById("nfcResult").textContent = "NFC Read: " + text;
+                        };
+                    } catch (error) {
+                        alert("Error: " + error);
+                    }
+                });
+
+                document.getElementById("writeNFC").addEventListener("click", async () => {
+                    let message = document.getElementById("nfcMessage").value;
+                    if (!message) {
+                        alert("Please enter a message to write.");
+                        return;
+                    }
+
+                    try {
+                        const ndef = new NDEFReader();
+                        await ndef.write(message);
+                        document.getElementById("writeStatus").textContent = "Successfully wrote: " + message;
+                    } catch (error) {
+                        alert("Error writing NFC: " + error);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
