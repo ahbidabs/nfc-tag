@@ -10,6 +10,13 @@
         input { padding: 10px; font-size: 16px; width: 80%; }
         video { width: 100%; max-width: 400px; margin: 20px auto; display: none; }
         .hidden { display: none; }
+        .circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background-color: red;
+            margin: 20px auto;
+        }
     </style>
 </head>
 <body>
@@ -24,6 +31,9 @@
     <video id="qrVideo" autoplay></video>
     <p id="qrResult">QR code data will appear here...</p>
 
+    <!-- Circle -->
+    <div id="colorCircle" class="circle"></div>
+
     <h2>Write to NFC Tag</h2>
     <input type="text" id="nfcMessage" placeholder="Enter text to write">
     <button id="writeNFC">Write to NFC Tag</button>
@@ -35,6 +45,8 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const nfcWarning = document.getElementById("nfcWarning");
+            const colorCircle = document.getElementById("colorCircle");
+            let lastScannedCode = null;
 
             /** ✅ NFC Functionality */
             if (!("NDEFReader" in window)) {
@@ -115,6 +127,15 @@
                                 qrResult.textContent = "QR Code: " + code.data;
                                 video.srcObject.getTracks().forEach(track => track.stop());
                                 video.style.display = "none";
+
+                                // Change circle color based on scanned code
+                                if (lastScannedCode === code.data) {
+                                    colorCircle.style.backgroundColor = "red";
+                                    lastScannedCode = null;
+                                } else {
+                                    colorCircle.style.backgroundColor = "green";
+                                    lastScannedCode = code.data;
+                                }
                             } else {
                                 requestAnimationFrame(scanFrame);
                             }
