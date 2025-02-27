@@ -15,8 +15,6 @@
 <body>
     <h1>Web NFC & QR Code Scanner</h1>
 
-    
-    
     <!-- NFC Read Button -->
     <button id="scanNFC">Scan NFC Tag</button>
     <p id="nfcResult">NFC data will appear here...</p>
@@ -33,10 +31,8 @@
 
     <p id="nfcWarning" class="hidden" style="color: red;"></p>
 
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script>
-        if ( 1=== 1 ) {
-        alert("Hello, World!");
-    }
         document.addEventListener("DOMContentLoaded", () => {
             const nfcWarning = document.getElementById("nfcWarning");
 
@@ -105,16 +101,18 @@
                     video.srcObject = stream;
                     video.style.display = "block";
 
-                    const qrScanner = new BarcodeDetector({ formats: ["qr_code"] });
-
                     const scanFrame = async () => {
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                            const imageCapture = new ImageCapture(video.srcObject.getVideoTracks()[0]);
-                            const bitmap = await imageCapture.grabFrame();
-                            const results = await qrScanner.detect(bitmap);
+                            const canvas = document.createElement("canvas");
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const context = canvas.getContext("2d");
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                            const code = jsQR(imageData.data, imageData.width, imageData.height);
 
-                            if (results.length > 0) {
-                                qrResult.textContent = "QR Code: " + results[0].rawValue;
+                            if (code) {
+                                qrResult.textContent = "QR Code: " + code.data;
                                 video.srcObject.getTracks().forEach(track => track.stop());
                                 video.style.display = "none";
                             } else {
