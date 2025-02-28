@@ -136,6 +136,7 @@
                                     colorCircle.style.backgroundColor = "green";
                                     lastScannedCode = code.data;
                                 }
+                                console.log(`Circle color: ${colorCircle.style.backgroundColor}, Last scanned code: ${lastScannedCode}`);
                             } else {
                                 requestAnimationFrame(scanFrame);
                             }
