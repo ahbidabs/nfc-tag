@@ -14,7 +14,7 @@
             width: 100px;
             height: 100px;
             border-radius: 50%;
-            background-color: red;
+            background-color: black;
             margin: 20px auto;
         }
     </style>
@@ -129,10 +129,10 @@
                                 video.style.display = "none";
 
                                 // Change circle color based on scanned code
-                                if (lastScannedCode === code.data) {
-                                    colorCircle.style.backgroundColor = "red";
+                                if (colorCircle.style.backgroundColor === "green" && lastScannedCode === code.data) {
+                                    colorCircle.style.backgroundColor = "black";
                                     lastScannedCode = null;
-                                } else {
+                                } else if (colorCircle.style.backgroundColor === "black") {
                                     colorCircle.style.backgroundColor = "green";
                                     lastScannedCode = code.data;
                                 }
